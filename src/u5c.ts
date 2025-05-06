@@ -10,12 +10,14 @@ import {
   BlockInfo,
   bytesToHex,
   castProtocol,
+  GovernanceProposalInfo,
   hexToBytes,
   IEvaluator,
   IFetcher,
   IListener,
   ISubmitter,
   Protocol,
+  RedeemerTagType,
   toBytes,
   TransactionInfo,
   UTxO,
@@ -23,8 +25,7 @@ import {
 import { Address, CardanoSDKUtil } from "@meshsdk/core-cst";
 
 export class U5CProvider
-  implements IFetcher, ISubmitter, IEvaluator, IListener
-{
+  implements IFetcher, ISubmitter, IEvaluator, IListener {
   private queryClient: CardanoQueryClient;
   private submitClient: CardanoSubmitClient;
 
@@ -44,6 +45,9 @@ export class U5CProvider
       uri: url,
       headers,
     });
+  }
+  fetchGovernanceProposal(txHash: string, certIndex: number): Promise<GovernanceProposalInfo> {
+    throw new Error("Method not implemented.");
   }
 
   onTxConfirmed(txHash: string, callback: () => void, limit = 100): void {
@@ -68,8 +72,33 @@ export class U5CProvider
     onConfirmed().finally(() => clearTimeout(timeoutId)); // Clear timeout on completion
   }
 
-  evaluateTx(tx: string): Promise<Omit<Action, "data">[]> {
-    throw new Error("Method not implemented.");
+  async evaluateTx(tx: string): Promise<Omit<Action, "data">[]> {
+
+    const report = await this.submitClient.evalTx(hexToBytes(tx));
+    const evalResult = report.report[0].chain.value?.redeemers!;
+
+    const tagMap: { [key: string]: RedeemerTagType } = {
+      // REDEEMER_PURPOSE_UNSPECIFIED: "UNSPECIFIED",
+      REDEEMER_PURPOSE_SPEND: "SPEND",
+      REDEEMER_PURPOSE_MINT: "MINT",
+      REDEEMER_PURPOSE_CERT: "CERT",
+      REDEEMER_PURPOSE_REWARD: "REWARD",
+      REDEEMER_PURPOSE_VOTE: "VOTE",
+      REDEEMER_PURPOSE_PROPOSE: "PROPOSE",
+    };
+
+    const result: Omit<Action, "data">[] = [];
+
+    evalResult.map((action) => {
+      result.push({
+        tag: tagMap[action.purpose!]!,
+        index: action.index,
+        budget: { mem: Number(action.exUnits!.memory), steps: Number(action.exUnits!.steps) },
+      });
+    })
+
+    return result;
+
   }
 
   async submitTx(tx: string): Promise<string> {
