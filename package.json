@@ -5,19 +5,22 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "example": "ts-node example/unlock-funds.ts"
   },
   "keywords": [],
   "author": "Gimbalabs",
   "license": "ISC",
   "devDependencies": {
-    "typescript": "^5.6.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@meshsdk/common": "^1.9.0-beta-40",
-    "@meshsdk/core-csl": "^1.9.0-beta-40",
-    "@meshsdk/core-cst": "^1.9.0-beta-40",
-    "@utxorpc/sdk": "^0.6.1",
-    "@utxorpc/spec": "^0.10.1"
+    "@meshsdk/common": "^1.9.0-beta.30",
+    "@meshsdk/core": "^1.9.0-beta.30",
+    "@meshsdk/core-csl": "^1.9.0-beta.30",
+    "@meshsdk/core-cst": "^1.9.0-beta.30",
+    "@utxorpc/sdk": "^0.6.7",
+    "@utxorpc/spec": "^0.16.0"
   }
 }

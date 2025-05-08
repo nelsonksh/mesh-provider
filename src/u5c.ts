@@ -14,6 +14,7 @@ import {
   hexToBytes,
   IEvaluator,
   IFetcher,
+  IFetcherOptions,
   IListener,
   ISubmitter,
   Protocol,
@@ -46,6 +47,11 @@ export class U5CProvider
       headers,
     });
   }
+
+  fetchAddressTxs(address: string, options?: IFetcherOptions): Promise<TransactionInfo[]> {
+    throw new Error("Method not implemented.");
+  }
+
   fetchGovernanceProposal(txHash: string, certIndex: number): Promise<GovernanceProposalInfo> {
     throw new Error("Method not implemented.");
   }
@@ -77,19 +83,19 @@ export class U5CProvider
     const report = await this.submitClient.evalTx(hexToBytes(tx));
     const evalResult = report.report[0].chain.value?.redeemers!;
 
-    const tagMap: { [key: string]: RedeemerTagType } = {
-      // REDEEMER_PURPOSE_UNSPECIFIED: "UNSPECIFIED",
-      REDEEMER_PURPOSE_SPEND: "SPEND",
-      REDEEMER_PURPOSE_MINT: "MINT",
-      REDEEMER_PURPOSE_CERT: "CERT",
-      REDEEMER_PURPOSE_REWARD: "REWARD",
-      REDEEMER_PURPOSE_VOTE: "VOTE",
-      REDEEMER_PURPOSE_PROPOSE: "PROPOSE",
+    const tagMap: { [key: number]: RedeemerTagType } = {
+      // 0: "UNSPECIFIED",   // REDEEMER_PURPOSE_UNSPECIFIED
+      1: "SPEND",   // REDEEMER_PURPOSE_SPEND
+      2: "MINT",    // REDEEMER_PURPOSE_MINT
+      3: "CERT",    // REDEEMER_PURPOSE_CERT
+      4: "REWARD",  // REDEEMER_PURPOSE_REWARD
+      5: "VOTE",    // REDEEMER_PURPOSE_VOTE
+      6: "PROPOSE", // REDEEMER_PURPOSE_PROPOSE
     };
 
     const result: Omit<Action, "data">[] = [];
 
-    evalResult.map((action) => {
+    evalResult.map((action: any) => {
       result.push({
         tag: tagMap[action.purpose!]!,
         index: action.index,
@@ -112,7 +118,7 @@ export class U5CProvider
   }
 
   async fetchAddressUTxOs(address: string, asset?: string): Promise<UTxO[]> {
-    const addressBytes = Buffer.from(Address.fromBech32(address).toBytes());
+    const addressBytes = hexToBytes(Address.fromBech32(address).toBytes());
 
     const utxoSearchResult = await this.queryClient.searchUtxosByAddress(
       addressBytes
@@ -175,8 +181,17 @@ export class U5CProvider
   fetchTxInfo(hash: string): Promise<TransactionInfo> {
     throw new Error("Method not implemented.");
   }
-  fetchUTxOs(hash: string): Promise<UTxO[]> {
-    throw new Error("Method not implemented.");
+  
+  async fetchUTxOs(hash: string, index?: number): Promise<UTxO[]> {
+    const utxoSearchResult = await this.queryClient.readUtxosByOutputRef(
+      [{
+        txHash: hexToBytes(hash),
+        outputIndex: index || 0,    // TODO: handle case when index is not provided. Note: readUtxos might not support this, try when readTx is implemented
+      }]
+    );
+    return utxoSearchResult.map((item) => {
+      return this._rpcUtxoToMeshUtxo(item.txoRef, item.parsedValued!);
+    });
   }
   get(url: string): Promise<any> {
     throw new Error("Method not implemented.");
